@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="accent_color">#9142b8</color>
+    <color name="accent_color_dark">#4c196c</color>
+
+    <!-- Цвета карточек покемонов -->
+    <color name="type_normal">#FFA8A878</color>
+    <color name="type_fire">#FFF08030</color>
+    <color name="type_water">#FF6890F0</color>
+    <color name="type_electric">#FFF8D030</color>
+    <color name="type_grass">#FF78C850</color>
+    <color name="type_ice">#FF98D8D8</color>
+    <color name="type_fighting">#FFC03028</color>
+    <color name="type_poison">#FFA040A0</color>
+    <color name="type_ground">#FFE0C068</color>
+    <color name="type_flying">#FFA890F0</color>
+    <color name="type_psychic">#FFF85888</color>
+    <color name="type_bug">#FFA8B820</color>
+    <color name="type_rock">#FFB8A038</color>
+    <color name="type_ghost">#FF705898</color>
+    <color name="type_dragon">#FF7038F8</color>
+    <color name="type_dark">#FF705848</color>
+    <color name="type_steel">#FFB8B8D0</color>
+    <color name="type_fairy">#FFEE99AC</color>
 </resources>
