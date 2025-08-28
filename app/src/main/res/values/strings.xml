@@ -2,6 +2,6 @@
     <string name="app_name">Pokemon_App</string>
     <string name="search_line">Search...</string>
     <string name="up">Up</string>
-    <!-- TODO: Remove or change this placeholder text -->
+    <string name="pokemon_image">Изображение покемона</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
