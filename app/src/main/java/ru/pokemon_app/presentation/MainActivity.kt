@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         setupFab()
         setupBottomSheet()
         setupResetButton()
+        setupSwipeRefresh()
 
         viewModel.loadPokemons(1)
     }
@@ -67,13 +68,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             binding.resetFiltersButton.isVisible = viewModel.isFilterOrSearchActive
-
             isLoading = false
         }
 
         viewModel.loading.observe(this) { isLoading ->
-            this.isLoading = isLoading
-            adapter.setLoading(isLoading)
+            binding.swipeRefreshLayout.isRefreshing = isLoading
+        }
+
+        viewModel.loadingMore.observe(this) { isLoadingMore ->
+            adapter.setLoading(isLoadingMore)
+            isLoading = isLoadingMore
         }
 
         viewModel.error.observe(this) { error ->
@@ -137,6 +141,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupResetButton() {
+        binding.resetFiltersButton.setOnClickListener {
+            currentPage = 1
+            viewModel.isFilterOrSearchActive = false
+            viewModel.loadPokemons(currentPage)
+            binding.resetFiltersButton.isVisible = false
+        }
+    }
+
+    private fun setupSwipeRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            currentPage = 1
+            viewModel.isFilterOrSearchActive = false
+            viewModel.loadPokemons(currentPage)
+        }
+    }
+
     private fun loadNextPage() {
         if (!isLoading && !viewModel.isFilterOrSearchActive) {
             currentPage++
@@ -159,15 +180,6 @@ class MainActivity : AppCompatActivity() {
             url.trimEnd('/').split('/').last().toInt()
         } catch (e: Exception) {
             0
-        }
-    }
-
-    private fun setupResetButton() {
-        binding.resetFiltersButton.setOnClickListener {
-            currentPage = 1
-            viewModel.isFilterOrSearchActive = false
-            viewModel.loadPokemons(currentPage)
-            binding.resetFiltersButton.isVisible = false
         }
     }
 }

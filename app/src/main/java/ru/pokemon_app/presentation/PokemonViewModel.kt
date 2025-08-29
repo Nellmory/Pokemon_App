@@ -8,7 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import ru.pokemon_app.domain.model.PokemonListResponse
-import ru.pokemon_app.data.repository.PokemonRepository
+import ru.pokemon_app.domain.repository.PokemonRepository
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,30 +22,39 @@ class PokemonViewModel @Inject constructor(
     private val _loading = MutableStateFlow(false)
     val loading: LiveData<Boolean> = _loading.asLiveData()
 
+    private val _loadingMore = MutableStateFlow(false)
+    val loadingMore: LiveData<Boolean> = _loadingMore.asLiveData()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: LiveData<String?> = _error.asLiveData()
 
     var isFilterOrSearchActive = false
 
     fun loadPokemons(page: Int, query: String? = null) {
-        viewModelScope.launch {
+        if (page == 1 && query.isNullOrEmpty() && !isFilterOrSearchActive) {
             _loading.value = true
-            _error.value = null
+        } else {
+            _loadingMore.value = true
+        }
 
+        isFilterOrSearchActive = !query.isNullOrEmpty()
+
+        viewModelScope.launch {
             try {
                 val result = repository.getPokemons(page, query)
                 if (result != null) {
                     _pokemonList.value = result
                 } else {
-                    _error.value = "Не удалось загрузить покемонов"
+                    if (page == 1) {
+                        _error.value = "Не удалось загрузить покемонов"
+                    }
                 }
             } catch (e: Exception) {
                 _error.value = "Ошибка: ${e.message}"
             } finally {
                 _loading.value = false
+                _loadingMore.value = false
             }
-
-            isFilterOrSearchActive = !query.isNullOrEmpty()
         }
     }
 
@@ -56,6 +65,8 @@ class PokemonViewModel @Inject constructor(
         minDefense: Int?,
         orderBy: String?
     ) {
+        isFilterOrSearchActive = true
+
         viewModelScope.launch {
             _loading.value = true
             try {
@@ -63,15 +74,11 @@ class PokemonViewModel @Inject constructor(
                 if (result != null && result.results.isNotEmpty()) {
                     _pokemonList.value = result
                 } else {
-                    _error.value = """
-                        Такие покемоны еще не загружены!
-                        """.trimIndent()
+                    _error.value = "Такие покемоны еще не загружены!"
                 }
             } finally {
                 _loading.value = false
             }
-
-            isFilterOrSearchActive = true
         }
     }
 }

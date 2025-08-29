@@ -1,4 +1,4 @@
-package ru.pokemon_app.data.remote.repository
+package ru.pokemon_app.data.repository
 
 import android.content.Context
 import android.util.Log
@@ -9,7 +9,7 @@ import ru.pokemon_app.data.local.entity.PokemonCacheEntity
 import ru.pokemon_app.data.remote.datasource.RetrofitClient
 import ru.pokemon_app.domain.model.*
 import javax.inject.Inject
-import ru.pokemon_app.data.repository.PokemonRepository
+import ru.pokemon_app.domain.repository.PokemonRepository
 
 class PokemonRepositoryImpl @Inject constructor(
     context: Context

@@ -1,4 +1,4 @@
-package ru.pokemon_app.data.repository
+package ru.pokemon_app.domain.repository
 
 import ru.pokemon_app.domain.model.Pokemon
 import ru.pokemon_app.domain.model.PokemonListResponse

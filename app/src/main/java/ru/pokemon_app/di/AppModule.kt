@@ -6,8 +6,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import ru.pokemon_app.data.remote.repository.PokemonRepositoryImpl
-import ru.pokemon_app.data.repository.PokemonRepository
+import ru.pokemon_app.data.repository.PokemonRepositoryImpl
+import ru.pokemon_app.domain.repository.PokemonRepository
 import javax.inject.Singleton
 
 @Module
