@@ -1,82 +1,150 @@
 package ru.pokemon_app.data.repository
 
-import android.content.Context
-import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import ru.pokemon_app.data.local.database.AppDatabase
-import ru.pokemon_app.data.local.entity.PokemonCacheEntity
-import ru.pokemon_app.data.remote.datasource.RetrofitClient
-import ru.pokemon_app.domain.model.*
-import javax.inject.Inject
+import ru.pokemon_app.data.local.datasource.LocalDataSource
+import ru.pokemon_app.data.mapper.PokemonMapper
+import ru.pokemon_app.data.remote.datasource.RemoteDataSource
+import ru.pokemon_app.common.Result
+import ru.pokemon_app.domain.model.Pokemon
+import ru.pokemon_app.domain.model.PokemonListResponse
+import ru.pokemon_app.domain.model.PokemonListItem
 import ru.pokemon_app.domain.repository.PokemonRepository
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.Dispatchers
 
 class PokemonRepositoryImpl @Inject constructor(
-    context: Context
+    private val remoteDataSource: RemoteDataSource,
+    private val localDataSource: LocalDataSource,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : PokemonRepository {
 
-    private val apiService = RetrofitClient.api
-    private val database = AppDatabase.getDatabase(context)
-    private val pokemonDao = database.pokemonDao()
     private val json = Json { ignoreUnknownKeys = true }
-    private val cacheTimeout = 24 * 60 * 60 * 1000 // 24h
+    private val cacheTimeout = 24 * 60 * 60 * 1000L
 
-    override suspend fun getPokemons(page: Int, query: String?): PokemonListResponse? {
-        val offset = (page - 1) * 20
-
-        return try {
-            if (query.isNullOrEmpty()) {
-                val response = apiService.getPokemons(offset = offset, limit = 20)
-
-                val enrichedResults = response.results.map { item ->
-                    val id = extractIdFromUrl(item.url)
-                    val pokemon = apiService.getPokemonById(id)
-                    saveToCache(pokemon)
-                    val typeName = pokemon.types.firstOrNull()?.type?.name
-                    item.copy(type = typeName)
-                }
-
-                response.copy(results = enrichedResults)
-            } else {
-                val cached = pokemonDao.searchPokemons(query).map { convertFromCache(it) }
-                if (cached.isNotEmpty()) {
-                    PokemonListResponse(
-                        count = cached.size,
-                        next = null,
-                        previous = null,
-                        results = cached.map {
-                            val typeName = it.types.firstOrNull()?.type?.name
-                            PokemonListItem(
-                                name = it.name,
-                                url = "offline/${it.id}",
-                                type = typeName
+    override suspend fun getPokemons(page: Int, query: String?): Result<PokemonListResponse> {
+        return withContext(dispatcher) {
+            try {
+                if (query.isNullOrEmpty()) {
+                    // Запрос из сети
+                    val offset = (page - 1) * 20
+                    when (val result = remoteDataSource.getPokemons(offset, 20)) {
+                        is Result.Success -> {
+                            // Создаем базовый ответ
+                            val baseResponse = PokemonListResponse(
+                                count = result.data.count,
+                                next = result.data.next,
+                                previous = result.data.previous,
+                                results = emptyList()
                             )
+
+                            // Обогащаем данные типами
+                            val enrichedResults = mutableListOf<PokemonListItem>()
+                            var hasNetworkError = false
+
+                            for (itemDto in result.data.results) {
+                                try {
+                                    val pokemonResult = getPokemonDetails(itemDto.extractId())
+                                    val typeName = when (pokemonResult) {
+                                        is Result.Success -> pokemonResult.data.types.firstOrNull()?.type?.name
+                                        is Result.Failure -> {
+                                            hasNetworkError = true
+                                            null
+                                        }
+                                    }
+                                    enrichedResults.add(
+                                        PokemonMapper.mapListItemToDomain(itemDto).copy(type = typeName)
+                                    )
+                                } catch (e: Exception) {
+                                    hasNetworkError = true
+                                    enrichedResults.add(PokemonMapper.mapListItemToDomain(itemDto))
+                                }
+                            }
+
+                            if (hasNetworkError && enrichedResults.isEmpty()) {
+                                Result.Failure(Exception("Network error occurred"))
+                            } else {
+                                Result.Success(baseResponse.copy(results = enrichedResults))
+                            }
                         }
+                        is Result.Failure -> {
+                            // Fallback to cache
+                            getPokemonsFromCache(page, null)
+                        }
+                    }
+                } else {
+                    // Поиск только в кэше
+                    getPokemonsFromCache(page, query)
+                }
+            } catch (e: Exception) {
+                Result.Failure(e)
+            }
+        }
+    }
+
+    private suspend fun getPokemonsFromCache(page: Int, query: String?): Result<PokemonListResponse> {
+        return try {
+            val offset = (page - 1) * 20
+            val cachedResult = if (query.isNullOrEmpty()) {
+                localDataSource.getPokemons(offset, 20)
+            } else {
+                localDataSource.searchPokemons(query)
+            }
+
+            when (cachedResult) {
+                is Result.Success -> {
+                    val pokemons = PokemonMapper.mapToDomainList(cachedResult.data)
+                    Result.Success(
+                        PokemonListResponse(
+                            count = pokemons.size,
+                            next = null,
+                            previous = null,
+                            results = pokemons.map {
+                                val typeName = it.types.firstOrNull()?.type?.name
+                                PokemonListItem(
+                                    name = it.name,
+                                    url = "offline/${it.id}",
+                                    type = typeName
+                                )
+                            }
+                        )
                     )
-                } else null
+                }
+                is Result.Failure -> Result.Failure(cachedResult.exception)
             }
         } catch (e: Exception) {
-            val cached = if (query.isNullOrEmpty()) {
-                pokemonDao.getPokemons(offset, 20).map { convertFromCache(it) }
-            } else {
-                pokemonDao.searchPokemons(query).map { convertFromCache(it) }
-            }
+            Result.Failure(e)
+        }
+    }
 
-            if (cached.isNotEmpty()) {
-                PokemonListResponse(
-                    count = cached.size,
-                    next = null,
-                    previous = null,
-                    results = cached.map {
-                        val typeName = it.types.firstOrNull()?.type?.name
-                        PokemonListItem(
-                            name = it.name,
-                            url = "offline/${it.id}",
-                            type = typeName
-                        )
+    override suspend fun getPokemonDetails(id: Int): Result<Pokemon> {
+        return withContext(dispatcher) {
+            try {
+                // Сначала пробуем сеть
+                when (val result = remoteDataSource.getPokemonById(id)) {
+                    is Result.Success -> {
+                        val pokemon = PokemonMapper.mapToDomain(result.data)
+                        savePokemonToCache(pokemon)
+                        Result.Success(pokemon)
                     }
-                )
-            } else null
+                    is Result.Failure -> {
+                        // Fallback to cache
+                        when (val cachedResult = localDataSource.getPokemonById(id)) {
+                            is Result.Success -> {
+                                cachedResult.data?.let { entity ->
+                                    Result.Success(PokemonMapper.mapToDomain(entity))
+                                } ?: Result.Failure(Exception("Pokemon not found in cache"))
+                            }
+                            is Result.Failure -> Result.Failure(cachedResult.exception)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Result.Failure(e)
+            }
         }
     }
 
@@ -86,94 +154,66 @@ class PokemonRepositoryImpl @Inject constructor(
         minAttack: Int?,
         minDefense: Int?,
         orderBy: String?
-    ): PokemonListResponse? {
-        return try {
-            val cached = pokemonDao.filterPokemons(type, minHp, minAttack, minDefense, orderBy)
-                .map { convertFromCache(it) }
-
-            if (cached.isNotEmpty()) {
-                PokemonListResponse(
-                    count = cached.size,
-                    next = null,
-                    previous = null,
-                    results = cached.map {
-                        val typeName = it.types.firstOrNull()?.type?.name
-                        PokemonListItem(
-                            name = it.name,
-                            url = "offline/${it.id}",
-                            type = typeName
-                        )
+    ): Result<PokemonListResponse> {
+        return withContext(dispatcher) {
+            try {
+                val filterResult = localDataSource.filterPokemons(type, minHp, minAttack, minDefense, orderBy)
+                when (filterResult) {
+                    is Result.Success -> {
+                        val pokemons = PokemonMapper.mapToDomainList(filterResult.data)
+                        if (pokemons.isNotEmpty()) {
+                            Result.Success(
+                                PokemonListResponse(
+                                    count = pokemons.size,
+                                    next = null,
+                                    previous = null,
+                                    results = pokemons.map {
+                                        val typeName = it.types.firstOrNull()?.type?.name
+                                        PokemonListItem(
+                                            name = it.name,
+                                            url = "offline/${it.id}",
+                                            type = typeName
+                                        )
+                                    }
+                                )
+                            )
+                        } else {
+                            Result.Failure(Exception("No pokemons found with these filters"))
+                        }
                     }
-                )
-            } else null
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Ошибка фильтрации: ${e.message}")
-            null
+                    is Result.Failure -> Result.Failure(filterResult.exception)
+                }
+            } catch (e: Exception) {
+                Result.Failure(e)
+            }
         }
     }
 
-    override suspend fun getPokemonDetails(id: Int): Pokemon? {
-        return try {
-            val pokemon = apiService.getPokemonById(id)
-            saveToCache(pokemon)
-            pokemon
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Ошибка деталей $id: ${e.message}")
-            getFromCache(id)
+    override suspend fun clearOldCache(): Result<Unit> {
+        return withContext(dispatcher) {
+            try {
+                val cutoffTime = System.currentTimeMillis() - cacheTimeout
+                when (val result = localDataSource.clearOldCache(cutoffTime)) {
+                    is Result.Success -> Result.Success(Unit)
+                    is Result.Failure -> Result.Failure(result.exception)
+                }
+            } catch (e: Exception) {
+                Result.Failure(e)
+            }
         }
     }
 
-    override suspend fun clearOldCache() {
-        val cutoffTime = System.currentTimeMillis() - cacheTimeout
-        pokemonDao.clearOldCache(cutoffTime)
-    }
-
-    private fun extractIdFromUrl(url: String): Int =
-        url.trimEnd('/').split('/').last().toInt()
-
-    private suspend fun getFromCache(id: Int): Pokemon? {
-        val cached = pokemonDao.getPokemonById(id)
-        return cached?.let { convertFromCache(it) }
-    }
-
-    private suspend fun saveToCache(pokemon: Pokemon) {
+    private suspend fun savePokemonToCache(pokemon: Pokemon) {
         try {
-            val hp = pokemon.stats.firstOrNull { it.stat.name == "hp" }?.baseStat ?: 0
-            val attack = pokemon.stats.firstOrNull { it.stat.name == "attack" }?.baseStat ?: 0
-            val defense = pokemon.stats.firstOrNull { it.stat.name == "defense" }?.baseStat ?: 0
-
-            val cacheEntity = PokemonCacheEntity(
-                id = pokemon.id,
-                name = pokemon.name,
-                height = pokemon.height,
-                weight = pokemon.weight,
-                baseExperience = pokemon.baseExperience,
-                types = json.encodeToString(pokemon.types),
-                stats = json.encodeToString(pokemon.stats),
-                sprites = json.encodeToString(pokemon.sprites),
-                abilities = json.encodeToString(pokemon.abilities),
-                hp = hp,
-                attack = attack,
-                defense = defense,
-                timestamp = System.currentTimeMillis()
-            )
-            pokemonDao.insertPokemon(cacheEntity)
+            val entity = PokemonMapper.mapToEntity(pokemon)
+            localDataSource.insertPokemon(entity)
         } catch (e: Exception) {
-            Log.e("PokemonRepository", "Ошибка сохранения в кеш: ${e.message}")
+            // Игнорируем ошибки сохранения в кэш
         }
     }
 
-    private fun convertFromCache(cached: PokemonCacheEntity): Pokemon {
-        return Pokemon(
-            id = cached.id,
-            name = cached.name,
-            height = cached.height,
-            weight = cached.weight,
-            baseExperience = cached.baseExperience,
-            types = json.decodeFromString(cached.types),
-            stats = json.decodeFromString(cached.stats),
-            sprites = json.decodeFromString(cached.sprites),
-            abilities = json.decodeFromString(cached.abilities)
-        )
+    // Вспомогательная функция для извлечения ID
+    private fun extractIdFromUrl(url: String): Int {
+        return url.trimEnd('/').split('/').last().toInt()
     }
 }

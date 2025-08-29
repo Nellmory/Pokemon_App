@@ -76,7 +76,7 @@
             app:cornerRadius="20dp"
             android:textColor="@android:color/white"
             android:backgroundTint="@android:color/transparent"
-            />
+            android:visibility="gone"/>
 
     </com.google.android.material.appbar.AppBarLayout>
 

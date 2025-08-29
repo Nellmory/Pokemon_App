@@ -1,6 +1,7 @@
 package ru.pokemon_app.presentation
 
 import android.annotation.SuppressLint
+import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -56,23 +57,28 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("NotifyDataSetChanged")
     private fun setupObservers() {
         viewModel.pokemonList.observe(this) { response ->
-            val newItems = response?.results ?: emptyList()
+            response?.let {
+                val newItems = it.results
 
-            binding.errorText.isVisible = newItems.isEmpty()
-            binding.pokemonList.isVisible = newItems.isNotEmpty()
+                binding.errorText.isVisible = newItems.isEmpty()
+                binding.pokemonList.isVisible = newItems.isNotEmpty()
 
-            if (currentPage == 1) {
-                adapter.setData(newItems)
-            } else {
-                adapter.appendData(newItems)
+                if (currentPage == 1) {
+                    adapter.setData(newItems)
+                } else {
+                    adapter.appendData(newItems)
+                }
+
+                binding.resetFiltersButton.isVisible = viewModel.isFilterOrSearchActive
+                isLoading = false
             }
-
-            binding.resetFiltersButton.isVisible = viewModel.isFilterOrSearchActive
-            isLoading = false
         }
 
         viewModel.loading.observe(this) { isLoading ->
             binding.swipeRefreshLayout.isRefreshing = isLoading
+            if (isLoading) {
+                binding.errorText.isVisible = false
+            }
         }
 
         viewModel.loadingMore.observe(this) { isLoadingMore ->
@@ -81,11 +87,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.error.observe(this) { error ->
-            if (error != null) {
-                binding.errorText.text = error
+            error?.let {
+                binding.errorText.text = it
                 binding.errorText.isVisible = true
                 binding.pokemonList.isVisible = false
                 isLoading = false
+
+                binding.errorText.postDelayed({
+                    viewModel.clearError()
+                }, 3000)
+            } ?: run {
+                binding.errorText.isVisible = false
             }
         }
     }
@@ -101,7 +113,7 @@ class MainActivity : AppCompatActivity() {
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
                 if (!isLoading && (visibleItemCount + firstVisibleItemPosition) >= totalItemCount
-                    && firstVisibleItemPosition >= 0) {
+                    && firstVisibleItemPosition >= 0 && totalItemCount > 0) {
                     loadNextPage()
                 }
             }
@@ -120,6 +132,14 @@ class MainActivity : AppCompatActivity() {
                 binding.searchView.hide()
             }
             true
+        }
+
+        binding.searchView.editText.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus && binding.searchView.text.toString().isEmpty()) {
+                currentPage = 1
+                viewModel.isFilterOrSearchActive = false
+                viewModel.loadPokemons(currentPage)
+            }
         }
     }
 
@@ -147,6 +167,8 @@ class MainActivity : AppCompatActivity() {
             viewModel.isFilterOrSearchActive = false
             viewModel.loadPokemons(currentPage)
             binding.resetFiltersButton.isVisible = false
+            binding.searchView.setText("")
+            binding.searchView.hide()
         }
     }
 
@@ -155,11 +177,13 @@ class MainActivity : AppCompatActivity() {
             currentPage = 1
             viewModel.isFilterOrSearchActive = false
             viewModel.loadPokemons(currentPage)
+            binding.searchView.setText("")
+            binding.searchView.hide()
         }
     }
 
     private fun loadNextPage() {
-        if (!isLoading && !viewModel.isFilterOrSearchActive) {
+        if (!isLoading && !viewModel.isFilterOrSearchActive && viewModel.canLoadMore) {
             currentPage++
             viewModel.loadPokemons(currentPage)
         }
@@ -177,9 +201,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun extractIdFromUrl(url: String): Int {
         return try {
-            url.trimEnd('/').split('/').last().toInt()
+            if (url.startsWith("offline/")) {
+                url.removePrefix("offline/").toInt()
+            } else {
+                url.trimEnd('/').split('/').last().toInt()
+            }
         } catch (e: Exception) {
             0
+        }
+    }
+
+    override fun onBackPressed() {
+        if (binding.searchView.isShowing) {
+            binding.searchView.hide()
+        } else if (viewModel.isFilterOrSearchActive) {
+            currentPage = 1
+            viewModel.isFilterOrSearchActive = false
+            viewModel.loadPokemons(currentPage)
+            binding.resetFiltersButton.isVisible = false
+        } else {
+            super.onBackPressed()
         }
     }
 }
