@@ -11,9 +11,7 @@ import ru.pokemon_app.databinding.ItemLoadingBinding
 import ru.pokemon_app.domain.model.PokemonListItem
 import ru.pokemon_app.utils.ImageLoader
 
-class PokemonAdapter(
-    private val viewModel: PokemonViewModel
-) : ListAdapter<PokemonListItem, RecyclerView.ViewHolder>(PokemonDiffCallback()) {
+class PokemonAdapter : ListAdapter<PokemonListItem, RecyclerView.ViewHolder>(PokemonDiffCallback()) {
 
     private val items = mutableListOf<PokemonListItem>()
 

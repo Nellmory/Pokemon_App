@@ -1,14 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".presentation.SortAndFilterFragment">
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#FF121212"
+    tools:context=".presentation.SortAndFilterBottomSheet">
 
-    <!-- TODO: Update blank fragment layout -->
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/choose_pokemon"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:layout_gravity="start"/>
 
-</FrameLayout>
+    <Spinner
+        android:id="@+id/typeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/pokemon_types"
+        android:backgroundTint="@color/accent_color"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/attribute_settings"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:layout_gravity="start"/>
+
+    <EditText
+        android:id="@+id/minHpInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/min_hp"
+        android:inputType="number"
+        android:textColorHint="@color/text_color"/>
+
+    <EditText
+        android:id="@+id/minAttackInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/min_attack"
+        android:inputType="number"
+        android:textColorHint="@color/text_color" />
+
+    <EditText
+        android:id="@+id/minDefenseInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/min_def"
+        android:inputType="number"
+        android:textColorHint="@color/text_color"
+        android:layout_marginBottom="12dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sort_by"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:layout_gravity="start"/>
+
+
+    <RadioGroup
+        android:id="@+id/sortRadioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp">
+
+        <RadioButton
+            android:id="@+id/sortByName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sort_by_name_but"
+            android:textColor="@color/text_color"/>
+
+        <RadioButton
+            android:id="@+id/sortByHp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sort_by_hp_but"
+            android:textColor="@color/text_color"/>
+
+        <RadioButton
+            android:id="@+id/sortByAttack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sort_by_attack_but"
+            android:textColor="@color/text_color"/>
+
+        <RadioButton
+            android:id="@+id/sortByDefense"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sort_by_def_but"
+            android:textColor="@color/text_color"/>
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/applyButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/accent_color_dark"
+        android:text="@string/apply_but"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        app:strokeColor="@color/accent_color"
+        app:strokeWidth="4dp"
+        app:cornerRadius="7dp"
+        android:elevation="0dp"
+        android:padding="12dp"
+        android:textStyle="bold"/>
+</LinearLayout>

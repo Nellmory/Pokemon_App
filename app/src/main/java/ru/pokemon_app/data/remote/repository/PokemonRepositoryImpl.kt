@@ -7,85 +7,119 @@ import kotlinx.serialization.json.Json
 import ru.pokemon_app.data.local.database.AppDatabase
 import ru.pokemon_app.data.local.entity.PokemonCacheEntity
 import ru.pokemon_app.data.remote.datasource.RetrofitClient
-import ru.pokemon_app.domain.model.Pokemon
-import ru.pokemon_app.domain.model.PokemonListResponse
+import ru.pokemon_app.domain.model.*
 import javax.inject.Inject
 import ru.pokemon_app.data.repository.PokemonRepository
 
 class PokemonRepositoryImpl @Inject constructor(
-    private val context: Context
+    context: Context
 ) : PokemonRepository {
+
     private val apiService = RetrofitClient.api
     private val database = AppDatabase.getDatabase(context)
     private val pokemonDao = database.pokemonDao()
     private val json = Json { ignoreUnknownKeys = true }
-    private val cacheTimeout = 24 * 60 * 60 * 1000
-    private val typeCache = mutableMapOf<Int, String>()
+    private val cacheTimeout = 24 * 60 * 60 * 1000 // 24h
 
     override suspend fun getPokemons(page: Int, query: String?): PokemonListResponse? {
-        return try {
-            val offset = (page - 1) * 20
-            val response = apiService.getPokemons(offset = offset, search = query)
+        val offset = (page - 1) * 20
 
-            val enrichedResults = response.results.map { item ->
-                val id = extractIdFromUrl(item.url)
-                val type = getPokemonType(id)
-                item.copy(type = type)
+        return try {
+            if (query.isNullOrEmpty()) {
+                val response = apiService.getPokemons(offset = offset, limit = 20)
+
+                val enrichedResults = response.results.map { item ->
+                    val id = extractIdFromUrl(item.url)
+                    val pokemon = apiService.getPokemonById(id)
+                    saveToCache(pokemon)
+                    val typeName = pokemon.types.firstOrNull()?.type?.name
+                    item.copy(type = typeName)
+                }
+
+                response.copy(results = enrichedResults)
+            } else {
+                val cached = pokemonDao.searchPokemons(query).map { convertFromCache(it) }
+                if (cached.isNotEmpty()) {
+                    PokemonListResponse(
+                        count = cached.size,
+                        next = null,
+                        previous = null,
+                        results = cached.map {
+                            val typeName = it.types.firstOrNull()?.type?.name
+                            PokemonListItem(
+                                name = it.name,
+                                url = "offline/${it.id}",
+                                type = typeName
+                            )
+                        }
+                    )
+                } else null
+            }
+        } catch (e: Exception) {
+            val cached = if (query.isNullOrEmpty()) {
+                pokemonDao.getPokemons(offset, 20).map { convertFromCache(it) }
+            } else {
+                pokemonDao.searchPokemons(query).map { convertFromCache(it) }
             }
 
-            response.copy(results = enrichedResults)
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error getting pokemons: ${e.message}")
-            null
+            if (cached.isNotEmpty()) {
+                PokemonListResponse(
+                    count = cached.size,
+                    next = null,
+                    previous = null,
+                    results = cached.map {
+                        val typeName = it.types.firstOrNull()?.type?.name
+                        PokemonListItem(
+                            name = it.name,
+                            url = "offline/${it.id}",
+                            type = typeName
+                        )
+                    }
+                )
+            } else null
         }
     }
 
-    private fun extractIdFromUrl(url: String): Int {
-        return url.trimEnd('/').split('/').last().toInt()
+    override suspend fun getFilteredPokemons(
+        type: String?,
+        minHp: Int?,
+        minAttack: Int?,
+        minDefense: Int?,
+        orderBy: String?
+    ): PokemonListResponse? {
+        return try {
+            val cached = pokemonDao.filterPokemons(type, minHp, minAttack, minDefense, orderBy)
+                .map { convertFromCache(it) }
+
+            if (cached.isNotEmpty()) {
+                PokemonListResponse(
+                    count = cached.size,
+                    next = null,
+                    previous = null,
+                    results = cached.map {
+                        val typeName = it.types.firstOrNull()?.type?.name
+                        PokemonListItem(
+                            name = it.name,
+                            url = "offline/${it.id}",
+                            type = typeName
+                        )
+                    }
+                )
+            } else null
+        } catch (e: Exception) {
+            Log.e("PokemonRepository", "Ошибка фильтрации: ${e.message}")
+            null
+        }
     }
 
     override suspend fun getPokemonDetails(id: Int): Pokemon? {
         return try {
             val pokemon = apiService.getPokemonById(id)
             saveToCache(pokemon)
-            pokemon.types.firstOrNull()?.type?.name?.let { type ->
-                typeCache[id] = type
-            }
             pokemon
         } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error getting pokemon $id: ${e.message}")
+            Log.e("PokemonRepository", "Ошибка деталей $id: ${e.message}")
             getFromCache(id)
-        }
-    }
-
-    override suspend fun getPokemonDetailsByName(name: String): Pokemon? {
-        return try {
-            val pokemon = apiService.getPokemonByName(name)
-            saveToCache(pokemon)
-            pokemon
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error getting pokemon $name: ${e.message}")
-            null
-        }
-    }
-
-    override suspend fun getPokemonType(pokemonId: Int): String? {
-        typeCache[pokemonId]?.let { return it }
-
-        val cachedPokemon = getFromCache(pokemonId)
-        cachedPokemon?.types?.firstOrNull()?.type?.name?.let { type ->
-            typeCache[pokemonId] = type
-            return type
-        }
-
-        return try {
-            val pokemon = apiService.getPokemonById(pokemonId)
-            val type = pokemon.types.firstOrNull()?.type?.name
-            type?.let { typeCache[pokemonId] = it }
-            type
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error getting pokemon type: ${e.message}")
-            null
         }
     }
 
@@ -94,18 +128,20 @@ class PokemonRepositoryImpl @Inject constructor(
         pokemonDao.clearOldCache(cutoffTime)
     }
 
+    private fun extractIdFromUrl(url: String): Int =
+        url.trimEnd('/').split('/').last().toInt()
+
     private suspend fun getFromCache(id: Int): Pokemon? {
-        return try {
-            val cached = pokemonDao.getPokemonById(id)
-            cached?.let { convertFromCache(it) }
-        } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error getting from cache: ${e.message}")
-            null
-        }
+        val cached = pokemonDao.getPokemonById(id)
+        return cached?.let { convertFromCache(it) }
     }
 
     private suspend fun saveToCache(pokemon: Pokemon) {
         try {
+            val hp = pokemon.stats.firstOrNull { it.stat.name == "hp" }?.baseStat ?: 0
+            val attack = pokemon.stats.firstOrNull { it.stat.name == "attack" }?.baseStat ?: 0
+            val defense = pokemon.stats.firstOrNull { it.stat.name == "defense" }?.baseStat ?: 0
+
             val cacheEntity = PokemonCacheEntity(
                 id = pokemon.id,
                 name = pokemon.name,
@@ -116,11 +152,14 @@ class PokemonRepositoryImpl @Inject constructor(
                 stats = json.encodeToString(pokemon.stats),
                 sprites = json.encodeToString(pokemon.sprites),
                 abilities = json.encodeToString(pokemon.abilities),
+                hp = hp,
+                attack = attack,
+                defense = defense,
                 timestamp = System.currentTimeMillis()
             )
             pokemonDao.insertPokemon(cacheEntity)
         } catch (e: Exception) {
-            Log.e("PokemonRepository", "Error saving to cache: ${e.message}")
+            Log.e("PokemonRepository", "Ошибка сохранения в кеш: ${e.message}")
         }
     }
 

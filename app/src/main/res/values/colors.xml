@@ -2,8 +2,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <color name="accent_color">#9142b8</color>
     <color name="accent_color_dark">#4c196c</color>
+    <color name="text_color">#ADADAD</color>
 
     <!-- Цвета карточек покемонов -->
+    <color name="type_any">#ADADAD</color>
     <color name="type_normal">#FFA8A878</color>
     <color name="type_fire">#FFF08030</color>
     <color name="type_water">#FF6890F0</color>

@@ -4,4 +4,42 @@
     <string name="up">Up</string>
     <string name="pokemon_image">Изображение покемона</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="sort_by_def_but">Защите</string>
+    <string name="sort_by_attack_but">Атаке</string>
+    <string name="sort_by_hp_but">HP</string>
+    <string name="sort_by_name_but">Имени</string>
+    <string name="min_def">Минимальная защита</string>
+    <string name="min_attack">Минимальная атака</string>
+    <string name="min_hp">Минимальное HP</string>
+    <string name="apply_but">Применить</string>
+    <string name="discard_filters">Сбросить фильтры</string>
+    <string name="list_is_empty">Здесь пусто! :(</string>
+    <string name="sort_and_filter_but">sort_and_filter_but</string>
+    <string name="logo">logo</string>
+    <string name="choose_pokemon">Выберите тип покемона:</string>
+    <string name="attribute_settings">Настройки атрибутов:</string>
+    <string name="sort_by">Сортировать по:</string>
+    <string name="loading">Загрузка...</string>
+
+    <string-array name="pokemon_types">
+        <item>Any</item>
+        <item>Normal</item>
+        <item>Fire</item>
+        <item>Water</item>
+        <item>Electric</item>
+        <item>Grass</item>
+        <item>Ice</item>
+        <item>Fighting</item>
+        <item>Poison</item>
+        <item>Ground</item>
+        <item>Flying</item>
+        <item>Psychic</item>
+        <item>Bug</item>
+        <item>Rock</item>
+        <item>Ghost</item>
+        <item>Dragon</item>
+        <item>Dark</item>
+        <item>Steel</item>
+        <item>Fairy</item>
+    </string-array>
 </resources>

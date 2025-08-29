@@ -5,7 +5,6 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 @Entity(tableName = "pokemon_cache")
-@Serializable
 data class PokemonCacheEntity(
     @PrimaryKey val id: Int,
     val name: String,
@@ -16,5 +15,8 @@ data class PokemonCacheEntity(
     val stats: String,
     val sprites: String,
     val abilities: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val hp: Int,
+    val attack: Int,
+    val defense: Int,
+    val timestamp: Long
 )

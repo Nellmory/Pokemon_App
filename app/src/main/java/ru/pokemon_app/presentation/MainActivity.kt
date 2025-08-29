@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,8 +33,9 @@ class MainActivity : AppCompatActivity() {
         setupScrollListener()
         setupSearch()
         setupFab()
+        setupBottomSheet()
+        setupResetButton()
 
-        // Загрузка данных
         viewModel.loadPokemons(1)
     }
 
@@ -42,11 +44,9 @@ class MainActivity : AppCompatActivity() {
         val layoutManager = GridLayoutManager(this, spanCount)
         binding.pokemonList.layoutManager = layoutManager
 
-        // Передаем ViewModel в адаптер
-        adapter = PokemonAdapter(viewModel)
+        adapter = PokemonAdapter()
         binding.pokemonList.adapter = adapter
 
-        // Обработка клика по элементу
         adapter.onItemClick = { pokemon ->
             openPokemonDetails(pokemon)
         }
@@ -56,24 +56,31 @@ class MainActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.pokemonList.observe(this) { response ->
             val newItems = response?.results ?: emptyList()
+
+            binding.errorText.isVisible = newItems.isEmpty()
+            binding.pokemonList.isVisible = newItems.isNotEmpty()
+
             if (currentPage == 1) {
                 adapter.setData(newItems)
             } else {
                 adapter.appendData(newItems)
             }
+
+            binding.resetFiltersButton.isVisible = viewModel.isFilterOrSearchActive
+
             isLoading = false
         }
 
         viewModel.loading.observe(this) { isLoading ->
             this.isLoading = isLoading
-            // Можно показать/скрыть прогресс в адаптере
             adapter.setLoading(isLoading)
         }
 
         viewModel.error.observe(this) { error ->
-            error?.let {
-                // Показать ошибку
-                android.widget.Toast.makeText(this, error, android.widget.Toast.LENGTH_SHORT).show()
+            if (error != null) {
+                binding.errorText.text = error
+                binding.errorText.isVisible = true
+                binding.pokemonList.isVisible = false
                 isLoading = false
             }
         }
@@ -89,7 +96,6 @@ class MainActivity : AppCompatActivity() {
                 val totalItemCount = layoutManager.itemCount
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                // Загружаем следующую страницу когда прокрутили до конца
                 if (!isLoading && (visibleItemCount + firstVisibleItemPosition) >= totalItemCount
                     && firstVisibleItemPosition >= 0) {
                     loadNextPage()
@@ -119,8 +125,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupBottomSheet() {
+        binding.myBottomSheetButton.setOnClickListener {
+            val sheet = SortAndFilterBottomSheet()
+            sheet.onApplyFilters =
+                { type, minHp, minAttack, minDefense, orderBy ->
+                    currentPage = 1
+                    viewModel.loadFilteredPokemons(type, minHp, minAttack, minDefense, orderBy)
+                }
+            sheet.show(supportFragmentManager, "SortFilter")
+        }
+    }
+
     private fun loadNextPage() {
-        if (!isLoading) {
+        if (!isLoading && !viewModel.isFilterOrSearchActive) {
             currentPage++
             viewModel.loadPokemons(currentPage)
         }
@@ -133,11 +151,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openPokemonDetails(pokemonItem: PokemonListItem) {
         val pokemonId = extractIdFromUrl(pokemonItem.url)
-        // Реализация перехода к деталям покемона
-        /*val intent = Intent(this, PokemonDetailActivity::class.java).apply {
-            putExtra("POKEMON_ID", pokemonId)
-        }
-        startActivity(intent)*/
+        // TODO: переход к деталям
     }
 
     private fun extractIdFromUrl(url: String): Int {
@@ -145,6 +159,15 @@ class MainActivity : AppCompatActivity() {
             url.trimEnd('/').split('/').last().toInt()
         } catch (e: Exception) {
             0
+        }
+    }
+
+    private fun setupResetButton() {
+        binding.resetFiltersButton.setOnClickListener {
+            currentPage = 1
+            viewModel.isFilterOrSearchActive = false
+            viewModel.loadPokemons(currentPage)
+            binding.resetFiltersButton.isVisible = false
         }
     }
 }

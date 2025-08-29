@@ -18,7 +18,4 @@ interface ApiService {
 
     @GET("pokemon/{id}")
     suspend fun getPokemonById(@Path("id") id: Int): Pokemon
-
-    @GET("pokemon/{name}")
-    suspend fun getPokemonByName(@Path("name") name: String): Pokemon
 }

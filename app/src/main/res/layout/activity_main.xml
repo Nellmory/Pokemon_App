@@ -20,6 +20,7 @@
             android:layout_width="250dp"
             android:layout_height="100dp"
             android:layout_gravity="center"
+            android:contentDescription="@string/logo"
             android:src="@drawable/logo" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -47,6 +48,7 @@
                 android:layout_height="50dp"
                 android:layout_marginEnd="16dp"
                 android:background="@android:color/transparent"
+                android:contentDescription="@string/sort_and_filter_but"
                 android:scaleType="centerInside"
                 android:src="@drawable/sort_filter_but"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -55,6 +57,27 @@
                 app:tint="@null" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resetFiltersButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="@string/discard_filters"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginEnd="16dp"
+            android:layout_marginStart="16dp"
+            app:icon="@drawable/ic_error"
+            app:iconTint="@color/accent_color"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:strokeColor="@android:color/white"
+            app:strokeWidth="1dp"
+            app:cornerRadius="20dp"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/transparent"
+            />
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.search.SearchView
@@ -78,6 +101,16 @@
         android:clipToPadding="false"
         android:padding="8dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <TextView
+        android:id="@+id/error_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/list_is_empty"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/fab_scroll_to_top"

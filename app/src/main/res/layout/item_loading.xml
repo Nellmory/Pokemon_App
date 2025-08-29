@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
+    android:backgroundTint="#1F1F1F"
     app:cardCornerRadius="30dp"
     app:cardElevation="4dp">
 
@@ -23,8 +24,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Загрузка..."
-            android:textColor="@color/accent_color_dark" />
+            android:text="@string/loading"
+            android:textColor="@android:color/white" />
 
     </LinearLayout>
 

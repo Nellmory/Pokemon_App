@@ -25,6 +25,8 @@ class PokemonViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: LiveData<String?> = _error.asLiveData()
 
+    var isFilterOrSearchActive = false
+
     fun loadPokemons(page: Int, query: String? = null) {
         viewModelScope.launch {
             _loading.value = true
@@ -42,19 +44,34 @@ class PokemonViewModel @Inject constructor(
             } finally {
                 _loading.value = false
             }
+
+            isFilterOrSearchActive = !query.isNullOrEmpty()
         }
     }
 
-    fun loadPokemonDetails(pokemonId: Int) {
+    fun loadFilteredPokemons(
+        type: String?,
+        minHp: Int?,
+        minAttack: Int?,
+        minDefense: Int?,
+        orderBy: String?
+    ) {
         viewModelScope.launch {
             _loading.value = true
             try {
-                val pokemon = repository.getPokemonDetails(pokemonId)
-            } catch (e: Exception) {
-                _error.value = "Ошибка загрузки деталей: ${e.message}"
+                val result = repository.getFilteredPokemons(type, minHp, minAttack, minDefense, orderBy)
+                if (result != null && result.results.isNotEmpty()) {
+                    _pokemonList.value = result
+                } else {
+                    _error.value = """
+                        Такие покемоны еще не загружены!
+                        """.trimIndent()
+                }
             } finally {
                 _loading.value = false
             }
+
+            isFilterOrSearchActive = true
         }
     }
 }

@@ -7,7 +7,7 @@ import android.content.Context
 import ru.pokemon_app.data.local.dao.PokemonDao
 import ru.pokemon_app.data.local.entity.PokemonCacheEntity
 
-@Database(entities = [PokemonCacheEntity::class], version = 1, exportSchema = false)
+@Database(entities = [PokemonCacheEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun pokemonDao(): PokemonDao
 
@@ -20,7 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "pokemon_database"
+                    "pokemon_db"
                 )
                     .fallbackToDestructiveMigration()
                     .build()
