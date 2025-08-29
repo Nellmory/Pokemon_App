@@ -67,7 +67,6 @@ object PokemonMapper {
         )
     }
 
-    // Entity → Domain
     fun mapToDomain(entity: PokemonCacheEntity): Pokemon {
         val json = Json { ignoreUnknownKeys = true }
         return Pokemon(
@@ -83,7 +82,6 @@ object PokemonMapper {
         )
     }
 
-    // Domain → Entity
     fun mapToEntity(domain: Pokemon): PokemonCacheEntity {
         val json = Json { ignoreUnknownKeys = true }
         val hp = domain.stats.firstOrNull { it.stat.name == "hp" }?.baseStat ?: 0
@@ -107,7 +105,6 @@ object PokemonMapper {
         )
     }
 
-    // List mappings
     fun mapToDomainList(entities: List<PokemonCacheEntity>): List<Pokemon> {
         return entities.map { mapToDomain(it) }
     }

@@ -49,7 +49,6 @@ class PokemonViewModel @Inject constructor(
                 when (val res = getPokemonsUseCase(page, query)) {
                     is Result.Success -> {
                         if (res.data.results.isEmpty()) {
-                            // ничего не пришло — дальше грузить бессмысленно
                             canLoadMore = false
                         } else {
                             _pokemonList.value = res.data
@@ -58,7 +57,6 @@ class PokemonViewModel @Inject constructor(
                     }
                     is Result.Failure -> {
                         handleError(res.exception, page)
-                        // ошибка — значит пока что дальше грузить нельзя
                         canLoadMore = false
                     }
                 }

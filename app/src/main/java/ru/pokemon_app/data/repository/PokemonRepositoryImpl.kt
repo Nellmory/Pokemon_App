@@ -29,11 +29,9 @@ class PokemonRepositoryImpl @Inject constructor(
         return withContext(dispatcher) {
             try {
                 if (query.isNullOrEmpty()) {
-                    // Запрос из сети
                     val offset = (page - 1) * 20
                     when (val result = remoteDataSource.getPokemons(offset, 20)) {
                         is Result.Success -> {
-                            // Создаем базовый ответ
                             val baseResponse = PokemonListResponse(
                                 count = result.data.count,
                                 next = result.data.next,
@@ -41,7 +39,6 @@ class PokemonRepositoryImpl @Inject constructor(
                                 results = emptyList()
                             )
 
-                            // Обогащаем данные типами
                             val enrichedResults = mutableListOf<PokemonListItem>()
                             var hasNetworkError = false
 
@@ -71,12 +68,10 @@ class PokemonRepositoryImpl @Inject constructor(
                             }
                         }
                         is Result.Failure -> {
-                            // Fallback to cache
                             getPokemonsFromCache(page, null)
                         }
                     }
                 } else {
-                    // Поиск только в кэше
                     getPokemonsFromCache(page, query)
                 }
             } catch (e: Exception) {
@@ -123,7 +118,6 @@ class PokemonRepositoryImpl @Inject constructor(
     override suspend fun getPokemonDetails(id: Int): Result<Pokemon> {
         return withContext(dispatcher) {
             try {
-                // Сначала пробуем сеть
                 when (val result = remoteDataSource.getPokemonById(id)) {
                     is Result.Success -> {
                         val pokemon = PokemonMapper.mapToDomain(result.data)
@@ -131,7 +125,6 @@ class PokemonRepositoryImpl @Inject constructor(
                         Result.Success(pokemon)
                     }
                     is Result.Failure -> {
-                        // Fallback to cache
                         when (val cachedResult = localDataSource.getPokemonById(id)) {
                             is Result.Success -> {
                                 cachedResult.data?.let { entity ->
@@ -208,11 +201,9 @@ class PokemonRepositoryImpl @Inject constructor(
             val entity = PokemonMapper.mapToEntity(pokemon)
             localDataSource.insertPokemon(entity)
         } catch (e: Exception) {
-            // Игнорируем ошибки сохранения в кэш
         }
     }
 
-    // Вспомогательная функция для извлечения ID
     private fun extractIdFromUrl(url: String): Int {
         return url.trimEnd('/').split('/').last().toInt()
     }
