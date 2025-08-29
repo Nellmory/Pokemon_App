@@ -20,6 +20,7 @@
     <string name="attribute_settings">Настройки атрибутов:</string>
     <string name="sort_by">Сортировать по:</string>
     <string name="loading">Загрузка...</string>
+    <string name="close">close</string>
 
     <string-array name="pokemon_types">
         <item>Any</item>

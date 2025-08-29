@@ -10,4 +10,11 @@
     <style name="MyFabStyle" parent="Widget.MaterialComponents.FloatingActionButton">
         <item name="android:background">@drawable/fab_background</item>
     </style>
+
+    <style name="RoundedDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowMinWidthMajor">80%</item>
+        <item name="android:windowMinWidthMinor">80%</item>
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+    </style>
 </resources>

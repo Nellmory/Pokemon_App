@@ -1,7 +1,7 @@
 package ru.pokemon_app.presentation
 
 import android.annotation.SuppressLint
-import android.net.ConnectivityManager
+import android.util.Log
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -64,9 +64,12 @@ class MainActivity : AppCompatActivity() {
                 binding.pokemonList.isVisible = newItems.isNotEmpty()
 
                 if (currentPage == 1) {
-                    adapter.setData(newItems)
+                    adapter.submitList(newItems)
                 } else {
-                    adapter.appendData(newItems)
+                    val combined = adapter.currentList.toMutableList().apply {
+                        addAll(newItems)
+                    }
+                    adapter.submitList(combined)
                 }
 
                 binding.resetFiltersButton.isVisible = viewModel.isFilterOrSearchActive
@@ -196,7 +199,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun openPokemonDetails(pokemonItem: PokemonListItem) {
         val pokemonId = extractIdFromUrl(pokemonItem.url)
-        // TODO: переход к деталям
+        val dialog = PokemonDetailsDialogFragment.newInstance(pokemonId)
+        dialog.show(supportFragmentManager, "PokemonDetailsDialog")
     }
 
     private fun extractIdFromUrl(url: String): Int {
