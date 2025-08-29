@@ -20,17 +20,17 @@
 
 ### Главный экран с списком покемонов
 
-<img src="./readme-images/main_screen.jpg" alt="Главный экран" height="400px" />
+<img src="./readme_images/main_screen.jpg" alt="Главный экран" height="400px" />
 
 ### Поиск покемонов
 
-<img src="./readme-images/search_screen.jpg" alt="Поиск покемонов" height="400px" />
+<img src="./readme_images/search_screen.jpg" alt="Поиск покемонов" height="400px" />
 
 ### Фильтрация и сортировка
 
-<img src="./readme-images/sort_and_filter_screen_1.jpg" alt="Фильтрация" height="400px" />
+<img src="./readme_images/sort_and_filter_screen_1.jpg" alt="Фильтрация" height="400px" />
 
-<img src="./readme-images/sort_and_filter_screen_2.jpg" alt="Оффлайн режим" height="400px" />
+<img src="./readme_images/sort_and_filter_screen_2.jpg" alt="Оффлайн режим" height="400px" />
 
 ## Стек технологий
 
